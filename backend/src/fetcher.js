@@ -10,9 +10,11 @@ const { articleToXml } = require('./utils/xmlConverter');
  * - Schedules a daily run at DAILY_HOUR:DAILY_MIN (defaults to 02:00)
  */
 
-async function fetchForKeyword(keyword) {
+async function fetchForKeyword(keyword, language) {
   try {
-    const rawArticles = await fetchArticlesByKeyword(keyword, {});
+    const params = {};
+    if (language) params.language = language;
+    const rawArticles = await fetchArticlesByKeyword(keyword, params);
     const savedArticles = [];
 
     for (const raw of rawArticles) {
@@ -41,9 +43,9 @@ async function fetchForKeyword(keyword) {
       savedArticles.push(doc);
     }
 
-    await Search.create({ keyword, language: '', country: '', resultCount: savedArticles.length });
+    await Search.create({ keyword, language: language || '', country: '', resultCount: savedArticles.length });
 
-    console.log(`Fetched ${savedArticles.length} articles for keyword="${keyword}"`);
+    console.log(`Fetched ${savedArticles.length} articles for keyword="${keyword}" language="${language || ''}"`);
     return savedArticles.length;
   } catch (err) {
     console.error(`Error fetching articles for keyword="${keyword}":`, err.message || err);
@@ -57,9 +59,19 @@ async function fetchOnce(keywords) {
     return;
   }
 
-  console.log('Starting daily fetch for keywords:', keywords);
+  const rawLang = process.env.DAILY_LANGUAGES || '';
+  const languages = rawLang.split(',').map(s => s.trim()).filter(Boolean);
+
+  console.log('Starting daily fetch for keywords:', keywords, 'languages:', languages.length ? languages : 'ALL');
+
   for (const kw of keywords) {
-    await fetchForKeyword(kw);
+    if (languages.length === 0) {
+      await fetchForKeyword(kw, null);
+    } else {
+      for (const lang of languages) {
+        await fetchForKeyword(kw, lang);
+      }
+    }
   }
   console.log('Daily fetch run completed.');
 }
