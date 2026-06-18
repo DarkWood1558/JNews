@@ -4,6 +4,7 @@
 cp env.example backend/.env
 # editiere backend/.env und trage NEWSDATA_API_KEY ein
 # optional: setze DAILY_KEYWORDS (Komma-getrennt), z.B. DAILY_KEYWORDS=Hello,World
+# optional: setze DAILY_LANGUAGES (Komma-getrennt), z.B. DAILY_LANGUAGES=english,german
 # optional: DAILY_HOUR (0-23), DAILY_MIN (0-59), DAILY_RUN_ON_START=true
 
 docker-compose up --build -d
