@@ -6,6 +6,25 @@ const Search = require('../models/Search');
 const { fetchArticlesByKeyword } = require('../utils/newsDataClient');
 const { articleToXml, articlesToXmlCollection } = require('../utils/xmlConverter');
 
+// Sprache normalisieren: akzeptiere sowohl Namen (english, german) als auch ISO-Codes (en, de)
+const LANG_MAP = {
+  english: 'en',
+  german: 'de',
+  french: 'fr',
+  spanish: 'es',
+  italian: 'it',
+  arabic: 'ar',
+  chinese: 'zh',
+  portuguese: 'pt',
+  russian: 'ru'
+};
+
+function normalizeLang(l) {
+  if (!l) return '';
+  const s = String(l).toLowerCase();
+  return s.length === 2 ? s : (LANG_MAP[s] || s);
+}
+
 /**
  * POST /api/search
  * Body: { keyword, language?, country? }
@@ -24,24 +43,46 @@ router.post('/search', async (req, res) => {
     const pages = parseInt(req.body.pages || 1, 10) || 1;
     const rawArticles = await fetchArticlesByKeyword(keyword.trim(), { language, country, pages });
 
+    // Wenn die externe API keine neuen Ergebnisse liefert, versuche vorhandene in MongoDB zurückzugeben
+    if (!rawArticles || rawArticles.length === 0) {
+      const storedFilter = { keyword: keyword.trim() };
+      if (language) {
+        const nl = normalizeLang(language);
+        storedFilter.language = { $in: [nl, String(language).toLowerCase()] };
+      }
+      const existing = await Article.find(storedFilter).sort({ publishedAt: -1 });
+      if (existing && existing.length > 0) {
+        console.warn('No new results from NewsData; returning stored articles for keyword/language.');
+        await Search.create({
+          keyword: keyword.trim(),
+          language: normalizeLang(language) || '',
+          country: country || '',
+          resultCount: existing.length
+        });
+        return res.json({ count: existing.length, articles: existing });
+      }
+    }
+
     const savedArticles = [];
     for (const raw of rawArticles) {
-      if (!raw.article_id) continue;
+      // Accept different ID field names from NewsData (article_id or id)
+      const articleId = raw.article_id || raw.id || (raw.guid && raw.guid["#text"]) || null;
+      if (!articleId) continue;
 
       const xml = articleToXml(raw);
 
       // upsert: falls Artikel schon existiert, nicht doppelt anlegen
       const doc = await Article.findOneAndUpdate(
-        { articleId: raw.article_id },
+        { articleId: articleId },
         {
-          articleId: raw.article_id,
+          articleId: articleId,
           title: raw.title || '(ohne Titel)',
           description: raw.description || '',
           link: raw.link || '',
           source: raw.source_id || raw.source_name || '',
           imageUrl: raw.image_url || '',
           publishedAt: raw.pubDate ? new Date(raw.pubDate) : undefined,
-          language: raw.language || '',
+          language: normalizeLang(raw.language) || '',
           country: raw.country || [],
           category: raw.category || [],
           keyword: keyword.trim(),
@@ -54,12 +95,14 @@ router.post('/search', async (req, res) => {
 
     await Search.create({
       keyword: keyword.trim(),
-      language: language || '',
+      language: normalizeLang(language) || '',
       country: country || '',
       resultCount: savedArticles.length
     });
 
-    res.json({ count: savedArticles.length, articles: savedArticles });
+    // include pagination/meta info if available from newsDataClient
+    const meta = rawArticles && rawArticles.meta ? rawArticles.meta : {};
+    res.json({ count: savedArticles.length, articles: savedArticles, partial: !!meta.partial, fetchedPages: meta.fetchedPages || 0, maxPages: meta.maxPages || pages });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message || 'Fehler bei der Suche.' });
@@ -75,7 +118,10 @@ router.get('/articles', async (req, res) => {
   try {
     const filter = {};
     if (req.query.keyword) filter.keyword = req.query.keyword;
-    if (req.query.language) filter.language = req.query.language;
+    if (req.query.language) {
+      const nl = normalizeLang(req.query.language);
+      filter.language = { $in: [nl, String(req.query.language).toLowerCase()] };
+    }
     if (req.query.country) filter.country = req.query.country;
     if (req.query.bookmarked !== undefined) filter.bookmarked = req.query.bookmarked === 'true';
 
@@ -131,7 +177,10 @@ router.get('/export/xml', async (req, res) => {
   try {
     const filter = {};
     if (req.query.keyword) filter.keyword = req.query.keyword;
-    if (req.query.language) filter.language = req.query.language;
+    if (req.query.language) {
+      const nl = normalizeLang(req.query.language);
+      filter.language = { $in: [nl, String(req.query.language).toLowerCase()] };
+    }
     if (req.query.bookmarked !== undefined) filter.bookmarked = req.query.bookmarked === 'true';
 
     const articles = await Article.find(filter).sort({ publishedAt: -1 });

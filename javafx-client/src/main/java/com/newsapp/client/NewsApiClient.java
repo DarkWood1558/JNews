@@ -1,5 +1,8 @@
 package com.newsapp.client;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.newsapp.model.Article;
 import com.newsapp.model.SearchEntry;
@@ -14,6 +17,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
+import java.util.ArrayList;
 
 /**
  * Kapselt alle HTTP-Aufrufe an das Node.js/Express Backend.
@@ -26,11 +30,15 @@ public class NewsApiClient {
     private final HttpClient httpClient;
     private final ObjectMapper objectMapper;
 
+    private SearchMeta lastSearchMeta = null;
+
     public NewsApiClient() {
         this.httpClient = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(10))
                 .build();
         this.objectMapper = new ObjectMapper();
+        // tolerate unknown properties from backend
+        this.objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
     }
 
     /**
@@ -49,8 +57,21 @@ public class NewsApiClient {
         HttpResponse<String> response = httpClient.send(request, BodyHandlers.ofString());
         checkStatus(response);
 
-        SearchResponse parsed = objectMapper.readValue(response.body(), SearchResponse.class);
-        return parsed.articles;
+        // parse as JSON tree to extract meta fields
+        JsonNode root = objectMapper.readTree(response.body());
+        JsonNode articlesNode = root.path("articles");
+        List<Article> list = new ArrayList<>();
+        if (articlesNode.isArray()) {
+            list = objectMapper.convertValue(articlesNode, new TypeReference<List<Article>>(){});
+        }
+        // set last search meta
+        this.lastSearchMeta = new SearchMeta(
+                root.path("count").asInt(list.size()),
+                root.path("partial").asBoolean(false),
+                root.path("fetchedPages").asInt(0),
+                root.path("maxPages").asInt(0)
+        );
+        return list;
     }
 
     /**
@@ -193,6 +214,24 @@ public class NewsApiClient {
     private static class SearchResponse {
         public int count;
         public List<Article> articles;
+    }
+
+    public static class SearchMeta {
+        public int count;
+        public boolean partial;
+        public int fetchedPages;
+        public int maxPages;
+
+        public SearchMeta(int count, boolean partial, int fetchedPages, int maxPages) {
+            this.count = count;
+            this.partial = partial;
+            this.fetchedPages = fetchedPages;
+            this.maxPages = maxPages;
+        }
+    }
+
+    public SearchMeta getLastSearchMeta() {
+        return this.lastSearchMeta;
     }
 
     private static class BookmarkRequest {

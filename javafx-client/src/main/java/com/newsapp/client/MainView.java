@@ -152,7 +152,17 @@ public class MainView {
             articles.setAll(task.getValue());
             Platform.runLater(() -> {
                 lblStatus.textProperty().unbind();
-                lblStatus.setText("Suche beendet. Gefundene Artikel: " + articles.size());
+                // show partial / pagination info if available
+                try {
+                    var meta = api.getLastSearchMeta();
+                    if (meta != null && meta.partial) {
+                        lblStatus.setText("Teilweise Ergebnisse: " + articles.size() + " Artikel (Seiten geladen: " + meta.fetchedPages + "/" + meta.maxPages + ")");
+                    } else {
+                        lblStatus.setText("Suche beendet. Gefundene Artikel: " + articles.size());
+                    }
+                } catch (Exception ex) {
+                    lblStatus.setText("Suche beendet. Gefundene Artikel: " + articles.size());
+                }
             });
         });
         task.setOnFailed(evt -> {
