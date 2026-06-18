@@ -54,6 +54,11 @@ async function fetchArticlesByKeyword(keyword, options = {}) {
         const status = err.response.status;
         const body = err.response.data;
         const msg = (body && body.status) ? JSON.stringify(body) : (err.response.statusText || 'Unknown error from NewsData');
+        // If pagination is unsupported for the requested params, stop fetching further pages and return accumulated results
+        if (status === 422 && String(msg).toLowerCase().includes('pagination')) {
+          console.warn('NewsData pagination unsupported for these params, returning accumulated results. Detail:', msg);
+          break;
+        }
         throw new Error(`NewsData API error ${status}: ${msg}`);
       }
       throw err;
