@@ -1,0 +1,19 @@
+{
+  "name": "news-backend",
+  "version": "1.0.0",
+  "description": "Backend für News-Such-App mit XML-Konvertierung und MongoDB",
+  "main": "src/server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "mongoose": "^8.5.0",
+    "axios": "^1.7.2",
+    "xml2js": "^0.6.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5"
+  }
+}
