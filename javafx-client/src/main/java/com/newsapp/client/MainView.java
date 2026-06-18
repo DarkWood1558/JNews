@@ -37,6 +37,7 @@ public class MainView {
     private final Button btnRefresh = new Button("Aktualisieren");
     private final CheckBox cbBookmarksOnly = new CheckBox("Nur Bookmarks");
     private final ComboBox<String> cbLanguage = new ComboBox<>();
+    private final Spinner<Integer> spPages = new Spinner<>(1, 10, 1);
     private final Button btnExport = new Button("Export (XML)");
 
     // Detail fields
@@ -85,13 +86,14 @@ public class MainView {
         // language combobox defaults
         cbLanguage.getItems().addAll("", "english", "german", "french", "spanish", "italian", "arabic", "chinese");
         cbLanguage.setValue("");
+        spPages.setEditable(true);
     }
 
     public void show(Stage stage) {
         BorderPane root = new BorderPane();
 
         // Top: search bar
-        HBox top = new HBox(8, tfKeyword, btnSearch, btnRefresh, cbBookmarksOnly, cbLanguage, btnExport);
+        HBox top = new HBox(8, tfKeyword, btnSearch, btnRefresh, cbBookmarksOnly, cbLanguage, new Label("Seiten:"), spPages, btnExport);
         top.setPadding(new Insets(10));
         HBox.setHgrow(tfKeyword, Priority.ALWAYS);
 
@@ -139,7 +141,8 @@ public class MainView {
             protected List<Article> call() throws Exception {
                 updateMessage("Suchen...");
                 String lang = (cbLanguage.getValue() == null || cbLanguage.getValue().isBlank()) ? null : cbLanguage.getValue();
-                return api.search(keyword.trim(), lang, null);
+                int pages = spPages.getValue();
+                return api.search(keyword.trim(), lang, null, pages);
             }
         };
 

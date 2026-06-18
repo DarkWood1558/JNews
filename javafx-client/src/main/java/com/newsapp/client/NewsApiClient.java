@@ -37,8 +37,8 @@ public class NewsApiClient {
      * Führt eine Keyword-Suche aus. Das Backend ruft NewsData.io auf,
      * wandelt die Ergebnisse in XML um und speichert sie in MongoDB.
      */
-    public List<Article> search(String keyword, String language, String country) throws IOException, InterruptedException {
-        String body = objectMapper.writeValueAsString(new SearchRequest(keyword, language, country));
+    public List<Article> search(String keyword, String language, String country, int pages) throws IOException, InterruptedException {
+        String body = objectMapper.writeValueAsString(new SearchRequest(keyword, language, country, pages));
 
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(BASE_URL + "/search"))
@@ -180,11 +180,13 @@ public class NewsApiClient {
         public String keyword;
         public String language;
         public String country;
+        public int pages;
 
-        public SearchRequest(String keyword, String language, String country) {
+        public SearchRequest(String keyword, String language, String country, int pages) {
             this.keyword = keyword;
             this.language = (language == null || language.isBlank()) ? null : language;
             this.country = (country == null || country.isBlank()) ? null : country;
+            this.pages = pages <= 0 ? 1 : pages;
         }
     }
 
