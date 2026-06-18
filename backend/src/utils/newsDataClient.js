@@ -15,39 +15,54 @@ async function fetchArticlesByKeyword(keyword, options = {}) {
     throw new Error('NEWSDATA_API_KEY ist nicht gesetzt. Bitte in der .env Datei eintragen.');
   }
 
-  const params = {
-    apikey: apiKey,
-    q: keyword
-  };
+  const pages = parseInt(options.pages || 1, 10) || 1;
+  const resultsAccum = [];
+  const seen = new Set();
 
-  // language: accept both ISO codes (en, de, ...) and common English names (english, german, ...)
-  if (options.language) {
-    const langRaw = String(options.language).trim().toLowerCase();
-    const map = {
-      english: 'en',
-      german: 'de',
-      french: 'fr',
-      spanish: 'es',
-      italian: 'it',
-      arabic: 'ar',
-      chinese: 'zh',
-      portuguese: 'pt',
-      russian: 'ru'
+  for (let page = 1; page <= pages; page++) {
+    const params = {
+      apikey: apiKey,
+      q: keyword,
+      page
     };
-    const code = langRaw.length === 2 ? langRaw : (map[langRaw] || langRaw);
-    params.language = code;
+
+    // language: accept both ISO codes (en, de, ...) and common English names (english, german, ...)
+    if (options.language) {
+      const langRaw = String(options.language).trim().toLowerCase();
+      const map = {
+        english: 'en',
+        german: 'de',
+        french: 'fr',
+        spanish: 'es',
+        italian: 'it',
+        arabic: 'ar',
+        chinese: 'zh',
+        portuguese: 'pt',
+        russian: 'ru'
+      };
+      const code = langRaw.length === 2 ? langRaw : (map[langRaw] || langRaw);
+      params.language = code;
+    }
+
+    if (options.country) params.country = options.country;
+
+    const response = await axios.get(BASE_URL, { params });
+    const results = response.data && response.data.results ? response.data.results : [];
+
+    if (!results || results.length === 0) break; // no more results
+
+    for (const article of results) {
+      const id = article.article_id || article.id || JSON.stringify(article).slice(0, 40);
+      if (seen.has(id)) continue;
+      seen.add(id);
+      resultsAccum.push({ ...article, _searchKeyword: keyword });
+    }
+
+    // if fewer items returned than expected page size, likely no more pages
+    if (results.length < 10) break;
   }
 
-  if (options.country) params.country = options.country;
-
-  const response = await axios.get(BASE_URL, { params });
-
-  // NewsData.io liefert die Artikel im Feld "results"
-  const results = response.data && response.data.results ? response.data.results : [];
-
-  // Suchbegriff an jeden Artikel anhängen, damit er beim XML-Export
-  // und in der DB nachvollziehbar bleibt
-  return results.map((article) => ({ ...article, _searchKeyword: keyword }));
+  return resultsAccum;
 }
 
 module.exports = { fetchArticlesByKeyword };

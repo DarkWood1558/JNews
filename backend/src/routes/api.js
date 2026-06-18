@@ -21,7 +21,8 @@ router.post('/search', async (req, res) => {
       return res.status(400).json({ error: 'Keyword darf nicht leer sein.' });
     }
 
-    const rawArticles = await fetchArticlesByKeyword(keyword.trim(), { language, country });
+    const pages = parseInt(req.body.pages || 1, 10) || 1;
+    const rawArticles = await fetchArticlesByKeyword(keyword.trim(), { language, country, pages });
 
     const savedArticles = [];
     for (const raw of rawArticles) {
