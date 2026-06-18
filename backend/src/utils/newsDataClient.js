@@ -46,7 +46,19 @@ async function fetchArticlesByKeyword(keyword, options = {}) {
 
     if (options.country) params.country = options.country;
 
-    const response = await axios.get(BASE_URL, { params });
+    let response;
+    try {
+      response = await axios.get(BASE_URL, { params });
+    } catch (err) {
+      if (err.response) {
+        const status = err.response.status;
+        const body = err.response.data;
+        const msg = (body && body.status) ? JSON.stringify(body) : (err.response.statusText || 'Unknown error from NewsData');
+        throw new Error(`NewsData API error ${status}: ${msg}`);
+      }
+      throw err;
+    }
+
     const results = response.data && response.data.results ? response.data.results : [];
 
     if (!results || results.length === 0) break; // no more results
