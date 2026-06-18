@@ -141,10 +141,16 @@ public class MainView {
 
         task.setOnSucceeded(evt -> {
             articles.setAll(task.getValue());
-            lblStatus.setText("Suche beendet. Gefundene Artikel: " + articles.size());
+            Platform.runLater(() -> {
+                lblStatus.textProperty().unbind();
+                lblStatus.setText("Suche beendet. Gefundene Artikel: " + articles.size());
+            });
         });
         task.setOnFailed(evt -> {
-            lblStatus.setText("Suche fehlgeschlagen: " + task.getException().getMessage());
+            Platform.runLater(() -> {
+                lblStatus.textProperty().unbind();
+                lblStatus.setText("Suche fehlgeschlagen: " + task.getException().getMessage());
+            });
         });
 
         new Thread(task, "search-thread").start();
@@ -166,10 +172,16 @@ public class MainView {
 
         task.setOnSucceeded(evt -> {
             articles.setAll(task.getValue());
-            lblStatus.setText("Geladen: " + articles.size());
+            Platform.runLater(() -> {
+                lblStatus.textProperty().unbind();
+                lblStatus.setText("Geladen: " + articles.size());
+            });
         });
         task.setOnFailed(evt -> {
-            lblStatus.setText("Laden fehlgeschlagen: " + task.getException().getMessage());
+            Platform.runLater(() -> {
+                lblStatus.textProperty().unbind();
+                lblStatus.setText("Laden fehlgeschlagen: " + task.getException().getMessage());
+            });
         });
 
         new Thread(task, "load-articles-thread").start();
@@ -223,9 +235,15 @@ public class MainView {
             int idx = articles.indexOf(sel);
             if (idx >= 0) articles.set(idx, updated);
             listView.getSelectionModel().select(updated);
-            lblStatus.setText("Bookmark gespeichert.");
+            Platform.runLater(() -> {
+                lblStatus.textProperty().unbind();
+                lblStatus.setText("Bookmark gespeichert.");
+            });
         });
-        task.setOnFailed(evt -> lblStatus.setText("Fehler beim Speichern: " + task.getException().getMessage()));
+        task.setOnFailed(evt -> Platform.runLater(() -> {
+            lblStatus.textProperty().unbind();
+            lblStatus.setText("Fehler beim Speichern: " + task.getException().getMessage());
+        }));
 
         new Thread(task, "save-bookmark-thread").start();
     }
@@ -251,8 +269,14 @@ public class MainView {
 
         bindTask(task);
 
-        task.setOnSucceeded(evt -> lblStatus.setText("Export erfolgreich: " + target.getAbsolutePath()));
-        task.setOnFailed(evt -> lblStatus.setText("Export fehlgeschlagen: " + task.getException().getMessage()));
+        task.setOnSucceeded(evt -> Platform.runLater(() -> {
+            lblStatus.textProperty().unbind();
+            lblStatus.setText("Export erfolgreich: " + target.getAbsolutePath());
+        }));
+        task.setOnFailed(evt -> Platform.runLater(() -> {
+            lblStatus.textProperty().unbind();
+            lblStatus.setText("Export fehlgeschlagen: " + task.getException().getMessage());
+        }));
 
         new Thread(task, "export-thread").start();
     }
@@ -277,9 +301,15 @@ public class MainView {
             s.setTitle("XML: " + (sel.getTitle() != null ? sel.getTitle() : "Artikel"));
             s.setScene(sc);
             s.show();
-            lblStatus.setText("XML geladen.");
+            Platform.runLater(() -> {
+                lblStatus.textProperty().unbind();
+                lblStatus.setText("XML geladen.");
+            });
         });
-        task.setOnFailed(evt -> lblStatus.setText("XML-Laden fehlgeschlagen: " + task.getException().getMessage()));
+        task.setOnFailed(evt -> Platform.runLater(() -> {
+            lblStatus.textProperty().unbind();
+            lblStatus.setText("XML-Laden fehlgeschlagen: " + task.getException().getMessage());
+        }));
 
         new Thread(task, "load-xml-thread").start();
     }
