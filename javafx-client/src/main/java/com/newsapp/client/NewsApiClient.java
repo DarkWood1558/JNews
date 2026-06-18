@@ -56,11 +56,15 @@ public class NewsApiClient {
     /**
      * Lädt gespeicherte Artikel aus MongoDB, optional gefiltert.
      */
-    public List<Article> getArticles(String keyword, Boolean bookmarkedOnly) throws IOException, InterruptedException {
+    public List<Article> getArticles(String keyword, String language, Boolean bookmarkedOnly) throws IOException, InterruptedException {
         StringBuilder url = new StringBuilder(BASE_URL + "/articles");
         boolean first = true;
         if (keyword != null && !keyword.isBlank()) {
             url.append(first ? "?" : "&").append("keyword=").append(urlEncode(keyword));
+            first = false;
+        }
+        if (language != null && !language.isBlank()) {
+            url.append(first ? "?" : "&").append("language=").append(urlEncode(language));
             first = false;
         }
         if (bookmarkedOnly != null) {
@@ -118,11 +122,15 @@ public class NewsApiClient {
      * @param bookmarkedOnly optionaler Filter nur Bookmarks (null = alle)
      * @param targetFile     Zielpfad auf der lokalen Festplatte
      */
-    public void exportXml(String keyword, Boolean bookmarkedOnly, Path targetFile) throws IOException, InterruptedException {
+    public void exportXml(String keyword, String language, Boolean bookmarkedOnly, Path targetFile) throws IOException, InterruptedException {
         StringBuilder url = new StringBuilder(BASE_URL + "/export/xml");
         boolean first = true;
         if (keyword != null && !keyword.isBlank()) {
             url.append(first ? "?" : "&").append("keyword=").append(urlEncode(keyword));
+            first = false;
+        }
+        if (language != null && !language.isBlank()) {
+            url.append(first ? "?" : "&").append("language=").append(urlEncode(language));
             first = false;
         }
         if (bookmarkedOnly != null) {
@@ -156,9 +164,9 @@ public class NewsApiClient {
         return response.body();
     }
 
-    private void checkStatus(HttpResponse<String> response) throws IOException {
+    private void checkStatus(HttpResponse<?> response) throws IOException {
         if (response.statusCode() >= 400) {
-            throw new IOException("Backend-Fehler (Status " + response.statusCode() + "): " + response.body());
+            throw new IOException("Backend-Fehler (Status " + response.statusCode() + ")");
         }
     }
 

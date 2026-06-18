@@ -36,6 +36,7 @@ public class MainView {
     private final Button btnSearch = new Button("Suchen");
     private final Button btnRefresh = new Button("Aktualisieren");
     private final CheckBox cbBookmarksOnly = new CheckBox("Nur Bookmarks");
+    private final ComboBox<String> cbLanguage = new ComboBox<>();
     private final Button btnExport = new Button("Export (XML)");
 
     // Detail fields
@@ -80,13 +81,17 @@ public class MainView {
             if (sel != null) openXmlWindow(sel);
         });
         btnExport.setOnAction(e -> exportXml());
+
+        // language combobox defaults
+        cbLanguage.getItems().addAll("", "english", "german", "french", "spanish", "italian", "arabic", "chinese");
+        cbLanguage.setValue("");
     }
 
     public void show(Stage stage) {
         BorderPane root = new BorderPane();
 
         // Top: search bar
-        HBox top = new HBox(8, tfKeyword, btnSearch, btnRefresh, cbBookmarksOnly, btnExport);
+        HBox top = new HBox(8, tfKeyword, btnSearch, btnRefresh, cbBookmarksOnly, cbLanguage, btnExport);
         top.setPadding(new Insets(10));
         HBox.setHgrow(tfKeyword, Priority.ALWAYS);
 
@@ -133,7 +138,8 @@ public class MainView {
             @Override
             protected List<Article> call() throws Exception {
                 updateMessage("Suchen...");
-                return api.search(keyword.trim(), null, null);
+                String lang = (cbLanguage.getValue() == null || cbLanguage.getValue().isBlank()) ? null : cbLanguage.getValue();
+                return api.search(keyword.trim(), lang, null);
             }
         };
 
@@ -164,7 +170,8 @@ public class MainView {
             @Override
             protected List<Article> call() throws Exception {
                 updateMessage("Lade Artikel...");
-                return api.getArticles((keywordFilter == null || keywordFilter.isBlank()) ? null : keywordFilter, bookmarkedOnly);
+                String lang = (cbLanguage.getValue() == null || cbLanguage.getValue().isBlank()) ? null : cbLanguage.getValue();
+                return api.getArticles((keywordFilter == null || keywordFilter.isBlank()) ? null : keywordFilter, lang, bookmarkedOnly);
             }
         };
 
@@ -262,7 +269,8 @@ public class MainView {
             @Override
             protected Void call() throws Exception {
                 updateMessage("Exportiere...");
-                api.exportXml((keywordFilter == null || keywordFilter.isBlank()) ? null : keywordFilter, bookmarkedOnly, target.toPath());
+                String lang = (cbLanguage.getValue() == null || cbLanguage.getValue().isBlank()) ? null : cbLanguage.getValue();
+                api.exportXml((keywordFilter == null || keywordFilter.isBlank()) ? null : keywordFilter, lang, bookmarkedOnly, target.toPath());
                 return null;
             }
         };
