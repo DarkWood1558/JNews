@@ -130,6 +130,7 @@ router.get('/export/xml', async (req, res) => {
   try {
     const filter = {};
     if (req.query.keyword) filter.keyword = req.query.keyword;
+    if (req.query.language) filter.language = req.query.language;
     if (req.query.bookmarked !== undefined) filter.bookmarked = req.query.bookmarked === 'true';
 
     const articles = await Article.find(filter).sort({ publishedAt: -1 });
