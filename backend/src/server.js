@@ -3,7 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const mongoose = require('mongoose');
 
-const apiRoutes = require('./backend/src/routes/api');
+const apiRoutes = require('./routes/api');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -26,6 +26,14 @@ async function start() {
     app.listen(PORT, () => {
       console.log(`Backend läuft auf Port ${PORT}`);
     });
+
+    // schedule daily fetches (optional)
+    try {
+      const { scheduleDailyRun } = require('./fetcher');
+      scheduleDailyRun();
+    } catch (e) {
+      console.warn('fetcher not available:', e.message || e);
+    }
   } catch (err) {
     console.error('Fehler beim Start des Servers:', err);
     process.exit(1);
