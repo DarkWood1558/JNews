@@ -19,7 +19,25 @@ async function fetchArticlesByKeyword(keyword, options = {}) {
     apikey: apiKey,
     q: keyword
   };
-  if (options.language) params.language = options.language;
+
+  // language: accept both ISO codes (en, de, ...) and common English names (english, german, ...)
+  if (options.language) {
+    const langRaw = String(options.language).trim().toLowerCase();
+    const map = {
+      english: 'en',
+      german: 'de',
+      french: 'fr',
+      spanish: 'es',
+      italian: 'it',
+      arabic: 'ar',
+      chinese: 'zh',
+      portuguese: 'pt',
+      russian: 'ru'
+    };
+    const code = langRaw.length === 2 ? langRaw : (map[langRaw] || langRaw);
+    params.language = code;
+  }
+
   if (options.country) params.country = options.country;
 
   const response = await axios.get(BASE_URL, { params });
